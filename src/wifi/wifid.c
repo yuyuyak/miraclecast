@@ -43,6 +43,7 @@
 const char *interface_name = NULL;
 unsigned int arg_wpa_loglevel = LOG_NOTICE;
 bool use_dev = false;
+bool lazy_managed = false;
 
 /*
  * Manager Handling
@@ -79,6 +80,8 @@ static void manager_add_udev_link(struct manager *m,
 	struct link *l;
 	unsigned int ifindex;
 	const char *ifname;
+    const char *mac_addr;
+    char buf[18];
 	int r;
 
 	ifindex = ifindex_from_udev_device(d);
@@ -97,21 +100,23 @@ static void manager_add_udev_link(struct manager *m,
 	if (shl_startswith(ifname, "p2p-"))
 		return;
 
-	r = link_new(m, ifindex, ifname, &l);
+	mac_addr = udev_device_get_property_value(d, "ID_NET_NAME_MAC");
+    mac_addr = mac_addr + strlen(mac_addr) - 12;
+    snprintf(buf, sizeof(buf), "%.2s:%.2s:%.2s:%.2s:%.2s:%.2s", mac_addr, mac_addr + 2, mac_addr + 4, mac_addr + 6, mac_addr + 8, mac_addr + 10);
+
+	r = link_new(m, ifindex, ifname, buf, &l);
 	if (r < 0)
 		return;
-
-	link_set_friendly_name(l, m->friendly_name);
 
     if(use_dev)
         link_use_dev(l);
 
 #ifdef RELY_UDEV
-	if (udev_device_has_tag(d, "miracle")) {
+	if (udev_device_has_tag(d, "miracle") && !lazy_managed) {
 #else
-	if (!interface_name || !strcmp(interface_name, ifname)) {
+	if ((!interface_name || !strcmp(interface_name, ifname)) && !lazy_managed) {
 #endif
-		link_set_managed(l, true);
+		link_manage(l, true);
 	} else {
 		log_debug("ignored device: %s", ifname);
 	}
@@ -150,13 +155,13 @@ static int manager_udev_fn(sd_event_source *source,
 		}
 
 #ifdef RELY_UDEV
-		if (udev_device_has_tag(d, "miracle"))
-			link_set_managed(l, true);
+		if (udev_device_has_tag(d, "miracle") && !lazy_managed)
+			link_manage(l, true);
 		else
-			link_set_managed(l, false);
+			link_manage(l, false);
 #else
-		if (!interface_name || !strcmp(interface_name, ifname)) {
-			link_set_managed(l, true);
+		if ((!interface_name || !strcmp(interface_name, ifname)) && !lazy_managed) {
+			link_manage(l, true);
 		} else {
 			log_debug("ignored device: %s", ifname);
 		}
@@ -175,8 +180,9 @@ static int manager_signal_fn(sd_event_source *source,
 	struct manager *m = data;
 
 	if (ssi->ssi_signo == SIGCHLD) {
+		siginfo_t info;
 		log_debug("caught SIGCHLD for %ld, reaping child", (long)ssi->ssi_pid);
-		waitid(P_PID, ssi->ssi_pid, NULL, WNOHANG|WEXITED);
+		waitid(P_PID, ssi->ssi_pid, &info, WNOHANG|WEXITED);
 		return 0;
 	} else if (ssi->ssi_signo == SIGPIPE) {
 		/* ignore SIGPIPE */
@@ -462,6 +468,7 @@ static int help(void)
 	       "\n"
 	       "     --wpa-loglevel <lvl   wpa_supplicant log-level\n"
 	       "     --use-dev             enable workaround for 'no ifname' issue\n"
+	       "     --lazy-managed        manage interface only when user decide to do\n"
 	       , program_invocation_short_name);
 	/*
 	 * 80-char barrier:
@@ -481,6 +488,7 @@ static int parse_argv(int argc, char *argv[])
 		ARG_WPA_LOGLEVEL,
 
 		ARG_USE_DEV,
+		ARG_LAZY_MANAGED,
 	};
 	static const struct option options[] = {
 		{ "help",	no_argument,		NULL,	'h' },
@@ -491,6 +499,7 @@ static int parse_argv(int argc, char *argv[])
 		{ "wpa-loglevel",	required_argument,	NULL,	ARG_WPA_LOGLEVEL },
 		{ "interface",	required_argument,	NULL,	'i' },
 		{ "use-dev",	no_argument,	NULL,	ARG_USE_DEV },
+		{ "lazy-managed",	no_argument,	NULL,	ARG_LAZY_MANAGED },
 		{}
 	};
 	int c;
@@ -513,6 +522,9 @@ static int parse_argv(int argc, char *argv[])
 			break;
 		case ARG_USE_DEV:
 			use_dev = true;
+			break;
+		case ARG_LAZY_MANAGED:
+			lazy_managed = true;
 			break;
 
 		case ARG_WPA_LOGLEVEL:

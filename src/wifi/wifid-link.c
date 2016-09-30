@@ -57,6 +57,7 @@ struct peer *link_find_peer_by_label(struct link *l, const char *label)
 int link_new(struct manager *m,
 	     unsigned int ifindex,
 	     const char *ifname,
+	     const char *mac_addr,
 	     struct link **out)
 {
 	struct link *l;
@@ -84,6 +85,12 @@ int link_new(struct manager *m,
 		goto error;
 	}
 
+    l->mac_addr = strdup(mac_addr);
+    if (!l->mac_addr) {
+        r = log_ENOMEM();
+        goto error;
+    }
+
 	r = supplicant_new(l, &l->s);
 	if (r < 0)
 		goto error;
@@ -100,6 +107,8 @@ int link_new(struct manager *m,
 	if (out)
 		*out = l;
 
+	l->public = true;
+	link_dbus_added(l);
 	return 0;
 
 error:
@@ -114,7 +123,10 @@ void link_free(struct link *l)
 
 	log_debug("free link: %s (%u)", l->ifname, l->ifindex);
 
-	link_set_managed(l, false);
+	link_manage(l, false);
+
+	link_dbus_removed(l);
+	l->public = false;
 
 	if (shl_htable_remove_uint(&l->m->links, l->ifindex, NULL)) {
 		log_info("remove link: %s", l->ifname);
@@ -123,9 +135,10 @@ void link_free(struct link *l)
 
 	supplicant_free(l->s);
 
-	/* link_set_managed(l, false) already removed all peers */
+	/* link_manage(l, false) already removed all peers */
 	shl_htable_clear_str(&l->peers, NULL, NULL);
 
+	free(l->mac_addr);
 	free(l->wfd_subelements);
 	free(l->friendly_name);
 	free(l->ifname);
@@ -142,29 +155,51 @@ bool link_is_using_dev(struct link *l)
     return l->use_dev;
 }
 
-void link_set_managed(struct link *l, bool set)
+int link_get_p2p_state(struct link *l)
+{
+	return l->p2p_state;
+}
+
+bool link_get_managed(struct link *l)
+{
+	return l->managed;
+}
+
+int link_manage(struct link *l, bool set)
 {
 	int r;
 
 	if (!l)
-		return log_vEINVAL();
+		return log_EINVAL();
 	if (l->managed == set)
-		return;
+		return 0;
 
 	if (set) {
-		log_info("manage link %s", l->ifname);
-
 		r = supplicant_start(l->s);
 		if (r < 0) {
 			log_error("cannot start supplicant on %s", l->ifname);
-			return;
+			return -EFAULT;
 		}
+		log_info("acquiring link ownership %s", l->ifname);
 	} else {
-		log_info("link %s no longer managed", l->ifname);
+		log_info("droping link ownership %s", l->ifname);
 		supplicant_stop(l->s);
 	}
 
-	l->managed = set;
+	return 0;
+}
+
+void link_supplicant_p2p_state_known(struct link *l, int state)
+{
+	if (!l)
+		return log_vEINVAL();
+	if (l->p2p_state == state)
+		return;
+	if(-1 > state || 1 < state)
+		return log_vEINVAL();
+
+	l->p2p_state = state;
+	link_dbus_properties_changed(l, "P2PState", NULL);
 }
 
 int link_renamed(struct link *l, const char *ifname)
@@ -198,6 +233,9 @@ int link_set_friendly_name(struct link *l, const char *name)
 
 	if (!l || !name || !*name)
 		return log_EINVAL();
+
+	if (!l->managed)
+		return log_EUNMANAGED();
 
 	t = strdup(name);
 	if (!t)
@@ -234,6 +272,9 @@ int link_set_wfd_subelements(struct link *l, const char *val)
 	if (!l || !val)
 		return log_EINVAL();
 
+	if (!l->managed)
+		return log_EUNMANAGED();
+
 	t = strdup(val);
 	if (!t)
 		return log_ENOMEM();
@@ -266,6 +307,9 @@ int link_set_p2p_scanning(struct link *l, bool set)
 	if (!l)
 		return log_EINVAL();
 
+	if (!l->managed)
+		return log_EUNMANAGED();
+
 	if (set) {
 		return supplicant_p2p_start_scan(l->s);
 	} else {
@@ -276,27 +320,51 @@ int link_set_p2p_scanning(struct link *l, bool set)
 
 bool link_get_p2p_scanning(struct link *l)
 {
-	return l && supplicant_p2p_scanning(l->s);
+	if (!l) {
+		log_vEINVAL();
+		return false;
+	}
+
+	if (!l->managed) {
+		return false;
+	}
+
+	return supplicant_p2p_scanning(l->s);
+}
+
+const char *link_get_mac_addr(struct link *l)
+{
+	if (!l)
+		return NULL;
+
+	return l->mac_addr;
 }
 
 void link_supplicant_started(struct link *l)
 {
+	if(l && !l->managed) {
+		l->managed = true;
+		link_dbus_properties_changed(l, "Managed", NULL);
+	}
+
 	if (!l || l->public)
 		return;
 
-	log_debug("link %s started", l->ifname);
-	l->public = true;
-	link_dbus_added(l);
+	link_set_friendly_name(l, l->m->friendly_name);
+	log_info("link is %s managed", l->ifname);
 }
 
 void link_supplicant_stopped(struct link *l)
 {
+	if(l && l->managed) {
+		l->managed = false;
+		link_dbus_properties_changed(l, "Managed", NULL);
+	}
+
 	if (!l || !l->public)
 		return;
 
-	log_debug("link %s stopped", l->ifname);
-	link_dbus_removed(l);
-	l->public = false;
+	log_info("link is %s unmanaged", l->ifname);
 }
 
 void link_supplicant_p2p_scan_changed(struct link *l, bool new_value)
