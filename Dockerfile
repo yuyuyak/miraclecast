@@ -18,20 +18,9 @@ RUN apt-get update && apt-get install -y \
 
 COPY . ./
 
-RUN rm -rf build-autotools ; \
-    mkdir build-autotools; \
-    cd build-autotools; \
-    ../autogen.sh; \
-    ../configure; \
-    make; \
-    make check
-
 RUN rm -rf build-cmake; \
     mkdir build-cmake; \
     cd build-cmake; \
     cmake ..; \
     make
 
-RUN rm -rf build-meson; \
-    meson build-meson; \
-    ninja -C build-meson
