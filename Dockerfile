@@ -20,11 +20,11 @@ RUN apt-get update && apt-get install -y \
       valac \
       libgtk-3-dev
 
-COPY . ./
+COPY . ./source
 
-RUN rm -rf build-cmake; \
+RUN cd source; \
+    rm -rf build-cmake; \
     mkdir build-cmake; \
     cd build-cmake; \
     cmake ..; \
     make
-
