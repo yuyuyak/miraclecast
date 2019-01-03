@@ -17,6 +17,8 @@
  * along with MiracleCast; If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "config.h"
+
 #include <errno.h>
 #include <getopt.h>
 #include <locale.h>
@@ -30,14 +32,17 @@
 #include <sys/time.h>
 #include <systemd/sd-bus.h>
 #include <systemd/sd-event.h>
+
+#ifdef ENABLE_SYSTEMD
 #include <systemd/sd-journal.h>
+#endif
+
 #include <time.h>
 #include <unistd.h>
 #include "ctl.h"
 #include "wfd.h"
 #include "shl_macro.h"
 #include "shl_util.h"
-#include "config.h"
 
 static sd_bus *bus;
 static struct ctl_wifi *wifi;
@@ -355,6 +360,7 @@ static void spawn_gst(int hres, int vres)
 		sigemptyset(&mask);
 		sigprocmask(SIG_SETMASK, &mask, NULL);
 
+#ifdef ENABLE_SYSTEMD
 		/* redirect stdout/stderr to journal */
 		fd_journal = sd_journal_stream_fd("miracle-sinkctl-gst",
 						  LOG_INFO,
@@ -364,9 +370,12 @@ static void spawn_gst(int hres, int vres)
 			dup2(fd_journal, 1);
 			dup2(fd_journal, 2);
 		} else {
+#endif
 			/* no journal? redirect stdout to parent's stderr */
 			dup2(2, 1);
+#ifdef ENABLE_SYSTEMD
 		}
+#endif
 
 		i = 0;
 		argv[i++] = (char*) BUILD_BINDIR "/miracle-gst.sh";
