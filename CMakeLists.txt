@@ -14,6 +14,7 @@ find_package(PkgConfig)
 if(ENABLE_SYSTEMD)
 	pkg_check_modules (SYSTEMD REQUIRED systemd>=213)
 else(ENABLE_SYSTEMD)
+	pkg_check_modules (ELOGIND REQUIRED libelogind>=213)
 endif(ENABLE_SYSTEMD)
 
 add_subdirectory(src)
