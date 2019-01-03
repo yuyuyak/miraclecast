@@ -7,6 +7,15 @@ add_definitions(-D_GNU_SOURCE)
 project(Miraclecast)
 cmake_minimum_required(VERSION 3.0)
 
+OPTION(ENABLE_SYSTEMD "Enable Systemd support" ON)
+
+find_package(PkgConfig)
+
+if(ENABLE_SYSTEMD)
+	pkg_check_modules (SYSTEMD REQUIRED systemd>=213)
+else(ENABLE_SYSTEMD)
+endif(ENABLE_SYSTEMD)
+
 add_subdirectory(src)
 add_subdirectory(res)
 add_subdirectory(test)
@@ -20,7 +29,6 @@ SET(PACKAGE_NAME miraclecast)
 SET(PACKAGE_VERSION 1)
 SET(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 
-find_package(PkgConfig)
 pkg_check_modules (GLIB2 REQUIRED glib-2.0)
 pkg_check_modules (UDEV REQUIRED libudev)
 
