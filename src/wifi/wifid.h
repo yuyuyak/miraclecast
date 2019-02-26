@@ -21,8 +21,13 @@
 #include <libudev.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#ifdef ENABLE_SYSTEMD
 #include <systemd/sd-bus.h>
 #include <systemd/sd-event.h>
+#else
+#include "sd-bus.h"
+#include "sd-event.h"
+#endif
 #include "shl_dlist.h"
 #include "shl_htable.h"
 

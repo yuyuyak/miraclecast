@@ -28,7 +28,11 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#ifdef ENABLE_SYSTEMD
 #include <systemd/sd-event.h>
+#else
+#include "sd-event.h"
+#endif
 #include <time.h>
 #include <unistd.h>
 #include "ctl.h"

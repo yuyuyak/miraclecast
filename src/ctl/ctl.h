@@ -25,7 +25,11 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#ifdef ENABLE_SYSTEMD
 #include <systemd/sd-bus.h>
+#else
+#include "sd-bus.h"
+#endif
 #include "shl_dlist.h"
 #include "shl_log.h"
 

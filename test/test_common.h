@@ -43,8 +43,13 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#ifdef ENABLE_SYSTEMD
 #include <systemd/sd-bus.h>
 #include <systemd/sd-event.h>
+#else
+#include "sd-bus.h"
+#include "sd-event.h"
+#endif
 #include <unistd.h>
 #include "shl_dlist.h"
 #include "shl_htable.h"

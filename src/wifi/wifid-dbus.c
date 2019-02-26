@@ -22,8 +22,13 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef ENABLE_SYSTEMD
 #include <systemd/sd-bus.h>
 #include <systemd/sd-event.h>
+#else
+#include "sd-bus.h"
+#include "sd-event.h"
+#endif
 #include "shl_log.h"
 #include "shl_util.h"
 #include "util.h"

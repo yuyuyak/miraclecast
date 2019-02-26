@@ -27,10 +27,12 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
-#include <systemd/sd-event.h>
-
 #ifdef ENABLE_SYSTEMD
+#include <systemd/sd-event.h>
 #include <systemd/sd-journal.h>
+#else
+#include "sd-event.h"
+#include "sd-journal.h"
 #endif
 
 #include <unistd.h>

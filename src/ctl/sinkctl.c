@@ -30,11 +30,18 @@
 #include <strings.h>
 #include <sys/signalfd.h>
 #include <sys/time.h>
+#ifdef ENABLE_SYSTEMD
 #include <systemd/sd-bus.h>
 #include <systemd/sd-event.h>
+#else
+#include "sd-bus.h"
+#include "sd-event.h"
+#endif
 
 #ifdef ENABLE_SYSTEMD
 #include <systemd/sd-journal.h>
+#else
+#include "sd-journal.h"
 #endif
 
 #include <time.h>

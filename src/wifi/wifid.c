@@ -27,9 +27,15 @@
 #include <string.h>
 #include <sys/signalfd.h>
 #include <sys/wait.h>
+#ifdef ENABLE_SYSTEMD
 #include <systemd/sd-bus.h>
 #include <systemd/sd-daemon.h>
 #include <systemd/sd-event.h>
+#else
+#include "sd-bus.h"
+#include "sd-daemon.h"
+#include "sd-event.h"
+#endif
 #include <time.h>
 #include <unistd.h>
 #include "shl_htable.h"

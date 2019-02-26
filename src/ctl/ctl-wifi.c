@@ -21,7 +21,11 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef ENABLE_SYSTEMD
 #include <systemd/sd-bus.h>
+#else
+#include "sd-bus.h"
+#endif
 #include "ctl.h"
 #include "shl_dlist.h"
 #include "shl_macro.h"

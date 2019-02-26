@@ -30,7 +30,11 @@
 #include <sys/timerfd.h>
 #include <sys/types.h>
 #include <sys/un.h>
+#ifdef ENABLE_SYSTEMD
 #include <systemd/sd-event.h>
+#else
+#include "sd-event.h"
+#endif
 #include <unistd.h>
 #include "shl_dlist.h"
 #include "shl_util.h"

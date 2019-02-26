@@ -27,7 +27,11 @@
 #include <string.h>
 #include <strings.h>
 #include <sys/signalfd.h>
+#ifdef ENABLE_SYSTEMD
 #include <systemd/sd-bus.h>
+#else
+#include "sd-bus.h"
+#endif
 #include "ctl.h"
 #include "shl_macro.h"
 #include "shl_util.h"

@@ -24,7 +24,11 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#ifdef ENABLE_SYSTEMD
 #include <systemd/sd-event.h>
+#else
+#include "sd-event.h"
+#endif
 
 /* types */
 

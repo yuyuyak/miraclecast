@@ -28,7 +28,11 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <sys/time.h>
+#ifdef ENABLE_SYSTEMD
 #include <systemd/sd-bus.h>
+#else
+#include "sd-bus.h"
+#endif
 #include <time.h>
 #include "shl_macro.h"
 
