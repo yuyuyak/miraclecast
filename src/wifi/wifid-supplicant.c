@@ -29,10 +29,10 @@
 #include <sys/types.h>
 #ifdef ENABLE_SYSTEMD
 #include <systemd/sd-event.h>
-#include <systemd/sd-journal.h>
+//#include <systemd/sd-journal.h>
 #else
 #include "sd-event.h"
-#include "sd-journal.h"
+//#include "sd-journal.h"
 #endif
 
 #include <unistd.h>
