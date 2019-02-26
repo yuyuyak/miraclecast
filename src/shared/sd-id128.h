@@ -35,7 +35,8 @@ union sd_id128 {
 
 #define SD_ID128_STRING_MAX 33
 
-char *sd_id128_to_string(sd_id128_t id, char s[_SD_ARRAY_STATIC SD_ID128_STRING_MAX]);
+//char *sd_id128_to_string(sd_id128_t id, char s[_SD_ARRAY_STATIC SD_ID128_STRING_MAX]);
+char *sd_id128_to_string(sd_id128_t id, char s[static 33]);
 int sd_id128_from_string(const char *s, sd_id128_t *ret);
 
 int sd_id128_randomize(sd_id128_t *ret);
